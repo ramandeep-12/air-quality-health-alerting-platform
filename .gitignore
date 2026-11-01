@@ -1,2 +1,54 @@
-airflow_home/
+# ---------------------------------------------------------------
+# Secrets and credentials: must never reach GitHub
+# ---------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*accessKeys*.csv
+*credentials*.csv
+*.pem
+*.key
+
+# ---------------------------------------------------------------
+# Airflow: generated at runtime, contains a Fernet key or local state
+# ---------------------------------------------------------------
+config/airflow.cfg
+logs/
+airflow.db
+*.pid
+simple_auth_manager_passwords.json.generated
+standalone_admin_password.txt
+
+# ---------------------------------------------------------------
+# dbt (Phase 3): build output and local user files
+# ---------------------------------------------------------------
+target/
+dbt_packages/
+.user.yml
+
+# ---------------------------------------------------------------
+# Python and uv
+# ---------------------------------------------------------------
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# ---------------------------------------------------------------
+# Local exploration output
+# ---------------------------------------------------------------
 explore/samples/
+
+# ---------------------------------------------------------------
+# Editor and OS files
+# ---------------------------------------------------------------
+.vscode/
+.idea/
+.DS_Store
