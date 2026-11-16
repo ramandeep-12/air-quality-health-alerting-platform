@@ -1,0 +1,31 @@
+cities:
+  - id: windsor
+    name: Windsor
+    latitude: 42.3149
+    longitude: -83.0364
+    active: true
+  - id: toronto
+    name: Toronto
+    latitude: 43.6532
+    longitude: -79.3832
+    active: true
+  - id: ottawa
+    name: Ottawa
+    latitude: 45.4215
+    longitude: -75.6972
+    active: true
+  - id: montreal
+    name: Montreal
+    latitude: 45.5019
+    longitude: -73.5674
+    active: true
+  - id: calgary
+    name: Calgary
+    latitude: 51.0447
+    longitude: -114.0719
+    active: true
+  - id: vancouver
+    name: Vancouver
+    latitude: 49.2827
+    longitude: -123.1207
+    active: true
