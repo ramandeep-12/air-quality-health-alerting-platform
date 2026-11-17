@@ -189,12 +189,22 @@ def get_cities() -> list[dict]:
     execution_timeout=timedelta(minutes=5),
 )
 def fetch_city(city: dict) -> str:
-    """Call the API for one city and store the untouched response in the raw zone."""
+    """Store the API response for one city in the raw zone (write-once per batch)."""
     context = get_current_context()
     batch_id = context["run_id"]
-    logical_date = context.get("logical_date")
-    run_at = pendulum.instance(logical_date) if logical_date else pendulum.now("UTC")
-    ingest_date = run_at.in_timezone(LOCAL_TZ).to_date_string()
+    # Both values stay the same when a run is retried, so the file path is stable
+    run_at = context.get("logical_date") or context["dag_run"].run_after
+    ingest_date = pendulum.instance(run_at).in_timezone(LOCAL_TZ).to_date_string()
+
+    safe_batch = re.sub(r"[^A-Za-z0-9_-]", "_", batch_id)
+    object_key = f"raw/air_quality/ingest_date={ingest_date}/city={city['id']}/{safe_batch}.json"
+
+    # Raw is immutable: a retry reuses what this batch originally fetched,
+    # instead of calling the API again and getting a different day's data
+    s3 = S3Hook(aws_conn_id=AWS_CONN_ID)
+    if s3.check_for_key(object_key, bucket_name=LAKE_BUCKET):
+        log.info("Raw file already exists for this batch, reusing it: s3://%s/%s", LAKE_BUCKET, object_key)
+        return object_key
 
     response = requests.get(
         API_URL,
@@ -226,18 +236,16 @@ def fetch_city(city: dict) -> str:
         "source_url": API_URL,
     }
 
-    safe_batch = re.sub(r"[^A-Za-z0-9_-]", "_", batch_id)
-    object_key = f"raw/air_quality/ingest_date={ingest_date}/city={city['id']}/{safe_batch}.json"
-    S3Hook(aws_conn_id=AWS_CONN_ID).load_string(
+    s3.load_string(
         json.dumps(payload),
         key=object_key,
         bucket_name=LAKE_BUCKET,
-        replace=True,  # a retry of the same batch overwrites its own file
+        replace=False,  # raw files are write-once
     )
     log.info("Saved %d hourly records to s3://%s/%s", len(hourly["time"]), LAKE_BUCKET, object_key)
     return object_key
 
-
+ 
 @task(max_active_tis_per_dagrun=1, retries=2, retry_delay=timedelta(minutes=1))
 def load_city(object_key: str) -> int:
     """MERGE one raw file into the Iceberg table. Runs one at a time to avoid Iceberg commit conflicts."""
